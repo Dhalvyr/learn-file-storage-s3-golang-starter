@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,7 +29,6 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusUnauthorized, "Couldn't validate JWT", err)
 		return
 	}
-
 
 	fmt.Println("uploading thumbnail for video", videoID, "by user", userID)
 
@@ -60,10 +60,9 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	newThumbnail := thumbnail{data: filedata, mediaType: mediaType}
-	videoThumbnails[videoID] = newThumbnail
-
-	thumbnailURL := fmt.Sprintf("http://localhost:%s/api/thumbnails/%s",cfg.port, videoID)
+	encodedFileData := base64.StdEncoding.EncodeToString(filedata)
+	thumbnailURL := fmt.Sprintf("data:%s;base64,%s",mediaType, encodedFileData)
+	
 	video.ThumbnailURL = &thumbnailURL
 	err = cfg.db.UpdateVideo(video)
 	if err != nil {
