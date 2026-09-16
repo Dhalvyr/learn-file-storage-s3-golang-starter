@@ -45,6 +45,17 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	defer file.Close()
 	mediaType := header.Header.Get("Content-Type")
 
+	parsedType, _, err := mime.ParseMediaType(mediaType)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid media type", err)
+		return
+	}
+
+	if parsedType != "image/jpeg" && parsedType != "image/png" {
+		respondWithError(w, http.StatusBadRequest, "Invalid media type", nil)
+		return
+	}
+
 	video, err := cfg.db.GetVideo(videoID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Unable to get video", err)
