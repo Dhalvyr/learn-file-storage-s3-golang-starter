@@ -90,7 +90,22 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 
 	generatedKey := make([]byte, 32)
 	rand.Read(generatedKey)
-	encodedKey := hex.EncodeToString(generatedKey) + ".mp4"
+	ratio, err := getVideoAspectRatio(tempFile.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to process the ratio", err)
+		return
+	}
+
+	var prefix string
+	switch ratio {
+		case "16:9":
+			prefix = "landscape/"
+		case "9:16":
+			prefix = "portrait/"
+		default:
+			prefix = "other/"
+	}
+	encodedKey := prefix + hex.EncodeToString(generatedKey) + ".mp4"
 
 	_, err = cfg.s3Client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
