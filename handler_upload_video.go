@@ -98,19 +98,33 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 
 	var prefix string
 	switch ratio {
-		case "16:9":
-			prefix = "landscape/"
-		case "9:16":
-			prefix = "portrait/"
-		default:
-			prefix = "other/"
+	case "16:9":
+		prefix = "landscape/"
+	case "9:16":
+		prefix = "portrait/"
+	default:
+		prefix = "other/"
 	}
 	encodedKey := prefix + hex.EncodeToString(generatedKey) + ".mp4"
+
+	processPath, err := processVideoForFastStart(tempFile.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to process fast start", err)
+		return
+	}
+
+	processFile, err := os.Open(processPath)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to open the fast start file", err)
+		return
+	}
+	defer os.Remove(processPath)
+	defer processFile.Close()
 
 	_, err = cfg.s3Client.PutObject(context.Background(), &s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
 		Key:         &encodedKey,
-		Body:        tempFile,
+		Body:        processFile,
 		ContentType: &parsedType,
 	})
 	if err != nil {
